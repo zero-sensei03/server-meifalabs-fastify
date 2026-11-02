@@ -75,7 +75,18 @@ const corsOrigins = readString(
     throw new Error(`Invalid CORS origin format: ${origin}`);
   }
 
-  if (nodeEnv === 'production' && parsed.protocol !== 'https:') {
+  // if (nodeEnv === 'production' && parsed.protocol !== 'https:') {
+  //   throw new Error('Production CORS origins must use HTTPS');
+  // }
+
+  const isTemporaryServerIp =
+    origin === 'http://202.74.75.22';
+
+  if (
+    nodeEnv === 'production' &&
+    parsed.protocol !== 'https:' &&
+    !isTemporaryServerIp
+  ) {
     throw new Error('Production CORS origins must use HTTPS');
   }
 
