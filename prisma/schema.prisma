@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BANNED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum OTPType {
+  REGISTER
+}
+
+model User {
+  id       String  @id @default(uuid())
+  username String  @unique
+  email    String? @unique
+  password String
+
+  verified_at DateTime?  @db.Timestamptz(3)
+  status      UserStatus @default(INACTIVE)
+
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+  updated_at DateTime @updatedAt @db.Timestamptz(3)
+
+  otp_verification OTPVerification[]
+
+  @@index([status])
+  @@map("user")
+}
+
+model OTPVerification {
+  id          String    @id @default(uuid())
+  user_id     String
+  otp_hash    String
+  expires_at  DateTime  @db.Timestamptz(3)
+  consumed_at DateTime? @db.Timestamptz(3)
+  attempts    Int       @default(0)
+  created_at  DateTime  @default(now()) @db.Timestamptz(3)
+  type        OTPType
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, created_at])
+  @@index([expires_at])
+  @@map("otp_verification")
+}
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  actor_id   String?
+  action     AuditAction
+  entity     String
+  entity_id  String
+  old_data   Json?
+  new_data   Json?
+  request_id String?
+  ip_address String?
+  user_agent String?
+  created_at DateTime    @default(now()) @db.Timestamptz(3)
+
+  @@index([entity, entity_id, created_at])
+  @@index([actor_id, created_at])
+  @@index([created_at])
+  @@map("audit_log")
+}
+
+model ModuleCategory {
+  code        String  @id
+  name        String
+  slug        String  @unique
+  description String? @db.Text
+  icon        String?
+  order       Int
+  is_active   Boolean @default(true)
+
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+
+  modules Module[]
+
+  @@index([is_active])
+  @@map("module_category")
+}
+
+model Module {
+  code             String   @id
+  category_id      String
+  module_name      String
+  slug             String   @unique
+  description      String?  @db.Text
+  price_monthly    Decimal? @db.Decimal(14, 2)
+  price_yearly     Decimal? @db.Decimal(14, 2)
+  discount_monthly Decimal? @db.Decimal(5, 2)
+  discount_yearly  Decimal? @db.Decimal(5, 2)
+  order            Int
+  is_active        Boolean  @default(true)
+  is_sellable      Boolean  @default(true)
+
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+
+  category ModuleCategory @relation(fields: [category_id], references: [code], onDelete: Cascade)
+
+  @@index([is_active])
+  @@index([is_sellable])
+  @@index([category_id])
+  @@map("module")
+}

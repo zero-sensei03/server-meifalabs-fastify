@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "module" ALTER COLUMN "price_monthly" SET DATA TYPE DECIMAL(14,2),
+ALTER COLUMN "price_yearly" SET DATA TYPE DECIMAL(14,2),
+ALTER COLUMN "discount_monthly" SET DATA TYPE DECIMAL(5,2),
+ALTER COLUMN "discount_yearly" SET DATA TYPE DECIMAL(5,2);
