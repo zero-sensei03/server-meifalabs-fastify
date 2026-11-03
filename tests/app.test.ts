@@ -38,9 +38,26 @@ describe('Fastify application', () => {
 
     expect(response.statusCode).toBe(404);
     expect(response.json()).toMatchObject({
-      statusCode: 404,
-      error: 'Not Found',
+      success: false,
+      error: { code: 'ROUTE_NOT_FOUND' },
     });
+  });
+
+  it('rejects current-user requests without a session cookie', async () => {
+    app = await buildApp();
+    const response = await app.inject({ method: 'GET', url: '/api/v1/auth/me' });
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({ success: false });
+  });
+
+  it('validates login bodies before attempting authentication', async () => {
+    app = await buildApp();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: { username: '', password: '' },
+    });
+    expect(response.statusCode).toBe(400);
   });
 
   it('does not allow an unlisted CORS origin', async () => {

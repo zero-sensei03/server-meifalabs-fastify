@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { RegisterInput, ResendRegisterOtpInput, VerifyEmailInput } from "./auth.validation.js";
-import { registerUser, resendEmailOTPRegister, verifyUserEmail } from "./auth.service.js";
+import { RegisterInput, ResendRegisterOtpInput, ResetPasswordInput, VerifyEmailInput } from "./auth.validation.js";
+import { forgotPasswordOTP, registerUser, resendEmailOTPRegister, resetPassword, verifyForgotPassword, verifyUserEmail } from "./auth.service.js";
 import { successResponse } from "../../utils/response.js";
 import { AuditService } from "../../services/audit.service.js";
 
@@ -31,7 +31,7 @@ export const resendOtpRegisterController = async (
 ) => {
     const result = await resendEmailOTPRegister(req.body);
 
-    return res.code(201).send(
+    return res.send(
         successResponse(result.message, result.user),
     );
 }
@@ -51,7 +51,40 @@ export const verifyRegisterController = async(
         old_data: result.last_data
     })
 
-    return res.code(201).send(
+    return res.send(
         successResponse(result.message, result.user),
     );
+}
+
+export const forgotPasswordOTPController = async (
+    req: FastifyRequest<{ Body: ResendRegisterOtpInput }>,
+    res: FastifyReply
+) => {
+    const result = await forgotPasswordOTP(req.body);
+
+    return res.send(
+        successResponse(result.message, result.user),
+    );
+}
+
+export const verifyForgotPasswordOTPController = async (
+    req: FastifyRequest<{ Body: VerifyEmailInput }>,
+    res: FastifyReply
+) => {
+    const result = await verifyForgotPassword(req.body);
+
+    return res.send(
+        successResponse(result.message, {})
+    )
+}
+
+export const resetPasswordController = async (
+    req: FastifyRequest<{ Body: ResetPasswordInput }>,
+    res: FastifyReply
+) => {
+    const result = await resetPassword(req.body)
+
+    return res.send(
+        successResponse(result.message, {})
+    )
 }
