@@ -12,12 +12,6 @@ export const registerSchema = Type.Object(
 
 export type RegisterInput = Static<typeof registerSchema>;
 
-export const loginSchema = Type.Object({
-  username: Type.String({ minLength: 1, maxLength: 32 }),
-  password: Type.String({ minLength: 1, maxLength: 128 }),
-}, { additionalProperties: false });
-export type LoginInput = Static<typeof loginSchema>;
-
 export const resendRegisterOtpSchema = Type.Object(
   {
     email: Type.String({ format: 'email', maxLength: 254 }),
@@ -48,3 +42,13 @@ export const resetPasswordSchema = Type.Object(
 );
 
 export type ResetPasswordInput = Static<typeof resetPasswordSchema>;
+
+export const loginSchema = Type.Object(
+  {
+    username: Type.String({ minLength: 3, maxLength: 32 }),
+    password: Type.String({ minLength: 8, maxLength: 128 }),
+  },
+  { additionalProperties: false },
+);
+
+export type LoginInput = Static<typeof loginSchema>;

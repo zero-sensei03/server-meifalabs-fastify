@@ -2,9 +2,10 @@
 import type { FastifyInstance } from 'fastify';
 import { successResponse } from '../../utils/response.js';
 import { registerSchema, ResendRegisterOtpInput, resendRegisterOtpSchema, ResetPasswordInput, resetPasswordSchema, verifyEmailSchema, loginSchema, LoginInput } from './auth.validation.js';
-import { forgotPasswordOTPController, registerController, resendOtpRegisterController, resetPasswordController, verifyForgotPasswordOTPController, verifyRegisterController } from './auth.controller.js';
-import { login, logout, requireCsrf, requireSession, requireTrustedOrigin, rotateCsrfToken, sessionCookieOptions } from './session.service.js';
+import { forgotPasswordOTPController, loginController, registerController, resendOtpRegisterController, resetPasswordController, verifyForgotPasswordOTPController, verifyRegisterController } from './auth.controller.js';
+import { logout, requireCsrf, requireSession, requireTrustedOrigin, rotateCsrfToken, sessionCookieOptions } from './session.service.js';
 import { env } from '../../config/env.js';
+import { authMiddleware } from '../../middlewares/auth.middleware.js';
 
 interface RegisterBody {
   username: string;
@@ -23,19 +24,19 @@ export async function authRoute(app: FastifyInstance): Promise<void> {
     { schema: { body: registerSchema } },
     registerController
   );
-  app.post<{ Body: LoginInput }>('/login', { schema: { body: loginSchema } }, async (request, reply) => {
-    const result = await login(request.body, request);
-    reply.setCookie(env.sessionCookieName, result.token, {
-      ...sessionCookieOptions(),
-      expires: result.expiresAt,
-      maxAge: env.sessionTtlSeconds,
-    });
-    return reply.send(successResponse('Login successful.', { user: result.user, csrf_token: result.csrfToken }));
-  });
-  app.get('/me', async (request, reply) => {
-    const { user } = await requireSession(request);
-    return reply.send(successResponse('Current user.', { user }));
-  });
+  app.post<{ Body: LoginInput }>(
+    '/login',
+    { schema: { body: loginSchema } },
+    loginController
+  );
+  app.get(
+    '/me',
+    { preHandler: authMiddleware, },
+      async (request, reply) => {
+      const { user } = await requireSession(request);
+      return reply.send(successResponse('Current user.', { user }));
+    }
+  );
   app.post('/csrf', async (request, reply) => {
     requireTrustedOrigin(request);
     const csrfToken = await rotateCsrfToken(request);
