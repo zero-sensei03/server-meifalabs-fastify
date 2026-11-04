@@ -11,6 +11,7 @@ import { errorResponse } from './utils/response.js';
 import { registerRoutes } from './router.js';
 
 import prismaPlugin from './plugins/prisma.plugin.js';
+import { registerAuthMiddleware } from './middlewares/auth.middleware.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -97,6 +98,7 @@ export async function buildApp() {
 
   await app.register(prismaPlugin);
 
+  registerAuthMiddleware(app);
   await app.register(healthRoute);
   await registerRoutes(app)
 

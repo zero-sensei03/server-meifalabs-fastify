@@ -79,8 +79,7 @@ const corsOrigins = readString(
   //   throw new Error('Production CORS origins must use HTTPS');
   // }
 
-  const isTemporaryServerIp =
-    origin === 'http://202.74.75.22';
+  const isTemporaryServerIp = origin === 'http://202.74.75.22';
 
   if (
     nodeEnv === 'production' &&
@@ -101,4 +100,6 @@ export const env = Object.freeze({
   corsOrigins,
   rateLimitMax: readPositiveInteger('RATE_LIMIT_MAX', 100),
   rateLimitWindow: readString('RATE_LIMIT_WINDOW', '1 minute'),
+  sessionTtlSeconds: readPositiveInteger('SESSION_TTL_SECONDS', 28_800),
+  sessionCookieName: nodeEnv === 'production' ? '__Host-school_session' : 'school_session',
 });

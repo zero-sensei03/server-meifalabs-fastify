@@ -7,6 +7,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+  SUPERADMIN
+  CUSTOMER
+}
+
 enum UserStatus {
   ACTIVE
   INACTIVE
@@ -21,6 +26,44 @@ enum AuditAction {
 
 enum OTPType {
   REGISTER
+  FORGOT_PASSWORD
+}
+
+enum LicenseStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  REVOKED
+}
+
+enum LicenseOrderType {
+  NEW_LICENSE
+  RENEWAL
+  UPGRADE
+}
+
+enum LicenseOrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  EXPIRED
+  CANCELLED
+  REFUNDED
 }
 
 model User {
@@ -32,13 +75,33 @@ model User {
   verified_at DateTime?  @db.Timestamptz(3)
   status      UserStatus @default(INACTIVE)
 
+  role        UserRole   @default(CUSTOMER)
+
   created_at DateTime @default(now()) @db.Timestamptz(3)
   updated_at DateTime @updatedAt @db.Timestamptz(3)
 
   otp_verification OTPVerification[]
+  sessions         AuthSession[]
+  licenses         License[]
+  license_orders   LicenseOrder[]
 
   @@index([status])
   @@map("user")
+}
+
+model AuthSession {
+  id         String   @id @default(uuid())
+  user_id    String
+  token_hash String   @unique
+  csrf_hash  String
+  expires_at DateTime @db.Timestamptz(3)
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, expires_at])
+  @@index([expires_at])
+  @@map("auth_session")
 }
 
 model OTPVerification {
@@ -111,9 +174,134 @@ model Module {
   created_at DateTime @default(now()) @db.Timestamptz(3)
 
   category ModuleCategory @relation(fields: [category_id], references: [code], onDelete: Cascade)
+  license_modules     LicenseModule[]
+  license_order_items LicenseOrderItem[]
 
   @@index([is_active])
   @@index([is_sellable])
   @@index([category_id])
   @@map("module")
+}
+
+
+model License {
+  id                  String        @id @default(uuid())
+  user_id             String
+  license_key_hash    String        @unique
+  license_key_prefix  String
+  installation_id     String?       @unique
+  vps_id              String
+  status              LicenseStatus @default(PENDING)
+
+  starts_at           DateTime?     @db.Timestamptz(3)
+  expires_at          DateTime?     @db.Timestamptz(3)
+  activated_at        DateTime?     @db.Timestamptz(3)
+  last_validated_at   DateTime?    @db.Timestamptz(3)
+  suspended_at        DateTime?     @db.Timestamptz(3)
+  revoked_at          DateTime?     @db.Timestamptz(3)
+
+  created_at          DateTime      @default(now()) @db.Timestamptz(3)
+  updated_at          DateTime      @updatedAt @db.Timestamptz(3)
+
+  user                User                 @relation(fields: [user_id], references: [id], onDelete: Restrict)
+  modules             LicenseModule[]
+  orders              LicenseOrder[]
+
+  @@index([user_id, status])
+  @@index([status, expires_at])
+  @@map("license")
+}
+
+model LicenseModule {
+  id          String   @id @default(uuid())
+  license_id  String
+  module_code String
+  is_enabled  Boolean  @default(true)
+  assigned_at DateTime @default(now()) @db.Timestamptz(3)
+  created_at  DateTime @default(now()) @db.Timestamptz(3)
+  updated_at  DateTime @updatedAt @db.Timestamptz(3)
+
+  license License @relation(fields: [license_id], references: [id], onDelete: Cascade)
+  module  Module  @relation(fields: [module_code], references: [code], onDelete: Restrict)
+
+  @@unique([license_id, module_code])
+  @@index([module_code, is_enabled])
+  @@map("license_module")
+}
+
+model LicenseOrder {
+  id             String            @id @default(uuid())
+  order_number   String            @unique
+  user_id        String
+  license_id     String
+  type           LicenseOrderType
+  status         LicenseOrderStatus @default(PENDING)
+
+  subtotal       Decimal           @db.Decimal(14, 2)
+  discount_total Decimal           @default(0) @db.Decimal(14, 2)
+  total_amount   Decimal           @db.Decimal(14, 2)
+  currency       String            @default("IDR")
+
+  description    String?           @db.Text
+  paid_at        DateTime?         @db.Timestamptz(3)
+  expires_at     DateTime?         @db.Timestamptz(3)
+  created_at     DateTime          @default(now()) @db.Timestamptz(3)
+  updated_at     DateTime          @updatedAt @db.Timestamptz(3)
+
+  user           User                @relation(fields: [user_id], references: [id], onDelete: Restrict)
+  license        License             @relation(fields: [license_id], references: [id], onDelete: Restrict)
+  items          LicenseOrderItem[]
+  payments       Payment[]
+
+  @@index([user_id, status, created_at])
+  @@index([license_id, created_at])
+  @@map("license_order")
+}
+
+model LicenseOrderItem {
+  id              String      @id @default(uuid())
+  order_id        String
+  module_code     String
+  billing_cycle   BillingCycle
+
+  unit_price      Decimal     @db.Decimal(14, 2)
+  discount_percent Decimal   @default(0) @db.Decimal(5, 2)
+  discount_amount Decimal    @default(0) @db.Decimal(14, 2)
+  final_amount    Decimal     @db.Decimal(14, 2)
+
+  created_at      DateTime    @default(now()) @db.Timestamptz(3)
+
+  order           LicenseOrder @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  module          Module       @relation(fields: [module_code], references: [code], onDelete: Restrict)
+
+  @@unique([order_id, module_code])
+  @@index([module_code])
+  @@map("license_order_item")
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  order_id              String
+  provider              String
+  provider_order_id     String
+  provider_transaction_id String?
+  provider_event_id     String?       @unique
+
+  status                PaymentStatus @default(PENDING)
+  amount                Decimal       @db.Decimal(14, 2)
+  currency              String        @default("IDR")
+  payment_method        String?
+  checkout_url          String?       @db.Text
+
+  expires_at            DateTime?     @db.Timestamptz(3)
+  paid_at               DateTime?     @db.Timestamptz(3)
+  created_at            DateTime      @default(now()) @db.Timestamptz(3)
+  updated_at            DateTime      @updatedAt @db.Timestamptz(3)
+
+  order LicenseOrder @relation(fields: [order_id], references: [id], onDelete: Restrict)
+
+  @@unique([provider, provider_order_id])
+  @@index([order_id, status])
+  @@index([provider_transaction_id])
+  @@map("payment")
 }

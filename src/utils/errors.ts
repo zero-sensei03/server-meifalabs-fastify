@@ -11,22 +11,22 @@ export class AppError extends Error {
   }
 }
 
-export function notFound(message = 'Data tidak ditemukan'): AppError {
+export function notFound(message = 'Data not found'): AppError {
   return new AppError(404, 'NOT_FOUND', message);
 }
 
-export function conflict(message = 'Data sudah digunakan'): AppError {
+export function conflict(message = 'Data already exists or is in use'): AppError {
   return new AppError(409, 'CONFLICT', message);
 }
 
-export function badRequest(message = 'Permintaan tidak valid'): AppError {
+export function badRequest(message = 'Invalid request'): AppError {
   return new AppError(400, 'BAD_REQUEST', message);
 }
 
-export function unauthorized(message = 'Autentikasi diperlukan'): AppError {
+export function unauthorized(message = 'Authentication is required'): AppError {
   return new AppError(401, 'UNAUTHORIZED', message);
 }
 
-export function forbidden(message = 'Akses ditolak'): AppError {
+export function forbidden(message = 'Access denied'): AppError {
   return new AppError(403, 'FORBIDDEN', message);
 }
