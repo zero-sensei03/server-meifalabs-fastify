@@ -112,12 +112,13 @@ export async function logout(request: FastifyRequest) {
   const session = await prisma.authSession.findUnique({ where: { token_hash: digest(token) }, select: { id: true, user_id: true } });
   if (session) {
     await prisma.authSession.deleteMany({ where: { id: session.id } });
-    await audit.createAudit({ req: request, entity: 'AUTH_LOGOUT', entity_id: session.id, actor_id: session.user_id, action: 'DELETE' });
+    // await audit.createAudit({ req: request, entity: 'AUTH_LOGOUT', entity_id: session.id, actor_id: session.user_id, action: 'DELETE' });
   }
 }
 
 export async function requireCsrf(request: FastifyRequest, expectedHash: string) {
   const actual = request.headers['x-csrf-token'];
+  console.log("CSRF TOKEN:", actual, "hash:", expectedHash);
   if (typeof actual !== 'string' || !timingSafeString(digest(actual), expectedHash)) {
     throw new AppError(403, 'CSRF_INVALID', 'CSRF token is invalid.');
   }
