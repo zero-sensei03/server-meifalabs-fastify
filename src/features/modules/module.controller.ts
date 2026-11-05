@@ -4,6 +4,8 @@ import { GetModuleQueryType, PatchModuleType } from "./module.validation.js";
 import { successResponse } from "../../utils/response.js";
 import { AuditService } from "../../services/audit.service.js";
 import { requireCsrf, requireSession } from "../auth/session.service.js";
+import { CheckUserPassword } from "../../services/user.service.js";
+import { badRequest } from "../../utils/errors.js";
 
 export class ModuleController {
 
@@ -46,15 +48,23 @@ export class ModuleController {
         const { session } = await this.session(req);
         await requireCsrf(req, session.csrf_hash);
 
+        const userId = session.user.id;
+        
         const { code } = req.params as { code: string };
-        const data = req.body as PatchModuleType;
-        const result = await this.moduleService.patchModule(code, data);
+        const { password, ...moduleData } = req.body as PatchModuleType;
+
+        if (!password) {
+            throw badRequest("Password is required for verification");
+        }
+        await CheckUserPassword(userId, password);
+
+        const result = await this.moduleService.patchModule(code, moduleData);
 
         await this.audit.createAudit({
             action: 'UPDATE',
             entity: 'MODULE_CATEGORY',
             entity_id: code,
-            actor_id: session.user.id,
+            actor_id: userId,
             old_data: result.old_data,
             new_data: result.new_data,
             req

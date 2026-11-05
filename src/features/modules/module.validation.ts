@@ -17,6 +17,8 @@ export const patchModuleSchema = Type.Partial(
 
       is_active: Type.Boolean(),
       is_sellable: Type.Boolean(),
+
+      password: Type.String({ minLength: 8, maxLength: 128 }),
     },
     { additionalProperties: false },
   )
