@@ -79,11 +79,13 @@ const corsOrigins = readString(
   //   throw new Error('Production CORS origins must use HTTPS');
   // }
 
+  const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
   const isTemporaryServerIp = origin === 'http://202.74.75.22';
 
   if (
     nodeEnv === 'production' &&
     parsed.protocol !== 'https:' &&
+    !isLocalhost &&
     !isTemporaryServerIp
   ) {
     throw new Error('Production CORS origins must use HTTPS');
