@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { CategoryController, CategoryPublicController } from "./category.controller.js";
 import { getCategoryQuerySchema, patchCategorySchema } from "./category.validate.js";
 import { authMiddleware } from "../../../middlewares/auth.middleware.js";
+import { checkRole } from "../../../middlewares/role.moddleware.js";
 
 export async function categoryPublicRoute(app: FastifyInstance): Promise<void> {
     const categoryPublicController = new CategoryPublicController();
@@ -31,7 +32,10 @@ export async function categoryRoute(app: FastifyInstance): Promise<void> {
     app.patch(
         "/:code",
         {
-            preHandler: [ authMiddleware ],
+            preHandler: [
+                authMiddleware,
+                checkRole(["SUPERADMIN", "ADMIN"])
+            ],
             schema: { body: patchCategorySchema }
         },
         categoryController.patchCategoryById

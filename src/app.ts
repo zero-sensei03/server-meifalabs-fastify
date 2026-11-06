@@ -45,6 +45,22 @@ export async function buildApp() {
     maxRequestsPerSocket: 1_000,
   });
 
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
+    const rawBody = Buffer.isBuffer(body) ? body.toString('utf8') : String(body || '');
+
+    if (!rawBody || rawBody.trim() === '') {
+      return done(null, {});
+    }
+    
+    try {
+      const json = JSON.parse(rawBody);
+      done(null, json);
+    } catch (err: any) {
+      err.statusCode = 400;
+      done(err, undefined);
+    }
+  });
+
   app.setNotFoundHandler(async (request, reply) => {
     return reply.code(404).send(
       errorResponse(
